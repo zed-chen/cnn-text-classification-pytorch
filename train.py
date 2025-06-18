@@ -84,9 +84,10 @@ def predict(text, model, tokenizer, vocab, cuda_flag):
     if cuda_flag:
         x = x.cuda()
         offsets = offsets.cuda()  # CHANGED: 添加offsets的cuda处理
-    output = model(x, offsets)  # CHANGED: 调用model时添加offsets参数
-    _, predicted = torch.max(output, 1)
-    return predicted.item() + 1  # CHANGED: 调整返回值，假设标签从1开始
+    _, output = model(x, offsets, return_features=True)  # CHANGED: 调用model时添加offsets参数
+    # _, predicted = torch.max(output, 1)
+    # return predicted.item() + 1  # CHANGED: 调整返回值，假设标签从1开始
+    return output
 
 
 def save(model, save_dir, save_prefix, steps):

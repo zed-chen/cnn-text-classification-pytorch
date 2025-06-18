@@ -109,6 +109,7 @@ args.class_num = 2  # Assume binary classification for MR dataset
 args.cuda = (not args.no_cuda) and torch.cuda.is_available(); del args.no_cuda
 args.kernel_sizes = [int(k) for k in args.kernel_sizes.split(',')]
 args.save_dir = os.path.join(args.save_dir, datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+args.feature_dim = 64
 
 print("\nParameters:")
 for attr, value in sorted(args.__dict__.items()):
@@ -130,7 +131,8 @@ if args.cuda:
 if args.predict is not None:
     # label = train.predict(args.predict, cnn, text_field, label_field, args.cuda)
     label = train.predict(args.predict, cnn, tokenizer, vocab, args.cuda)
-    print('\n[Text]  {}\n[Label] {}\n'.format(args.predict, label))
+    # print('\n[Text]  {}\n[Label] {}\n'.format(args.predict, label))
+    print(f"[Encoding] {args.predict} -> {label}")
 elif args.test:
     try:
         train.eval(dev_iter, cnn, args) 
