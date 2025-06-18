@@ -99,6 +99,8 @@ rt-polaritydata
 trees
 *.tar
 *.zip
+*.tar.gz
+rt-polaritydata.README.1.0.txt
 
 # pycharm
 .idea

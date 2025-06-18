@@ -1,43 +1,42 @@
 import os
 import sys
 import torch
-import torch.autograd as autograd
-import torch.nn.functional as F
+import torch.nn.functional as F # 导入F函数, 用于计算损失函数
 
 
 def train(train_iter, dev_iter, model, args):
     if args.cuda:
         model.cuda()
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    # L2正则化
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
 
     steps = 0
     best_acc = 0
     last_step = 0
     for epoch in range(1, args.epochs+1):
-        for batch in train_iter:
+        # for batch in train_iter:
+        for labels, texts, offsets in train_iter:  # CHANGED: 添加offsets参数
             model.train()
-            feature, target = batch.text, batch.label
-            feature.t_(), target.sub_(1)  # batch first, index align
             if args.cuda:
-                feature, target = feature.cuda(), target.cuda()
-
-            optimizer.zero_grad()
-            logit = model(feature)
-            loss = F.cross_entropy(logit, target)
-            loss.backward()
-            optimizer.step()
+                labels, texts, offsets = labels.cuda(), texts.cuda(), offsets.cuda()  # CHANGED: 添加offsets的cuda处理
+            
+            optimizer.zero_grad() # 清空梯度
+            logit = model(texts, offsets)   # CHANGED: 调用model时添加offsets参数
+            loss = F.cross_entropy(logit, labels)
+            loss.backward() # 计算梯度
+            optimizer.step() # 更新参数
 
             steps += 1
             if steps % args.log_interval == 0:
-                corrects = (torch.max(logit, 1)[1].view(target.size()).data == target.data).sum()
-                accuracy = 100.0 * corrects/batch.batch_size
+                corrects = (torch.max(logit, 1)[1].view(labels.size()).data == labels.data).sum()
+                accuracy = 100.0 * corrects/labels.size(0)
                 sys.stdout.write(
                     '\rBatch[{}] - loss: {:.6f}  acc: {:.4f}%({}/{})'.format(steps, 
                                                                              loss.item(), 
                                                                              accuracy.item(),
                                                                              corrects.item(),
-                                                                             batch.batch_size))
+                                                                             labels.size(0)))
             if steps % args.test_interval == 0:
                 dev_acc = eval(dev_iter, model, args)
                 if dev_acc > best_acc:
@@ -55,20 +54,17 @@ def train(train_iter, dev_iter, model, args):
 def eval(data_iter, model, args):
     model.eval()
     corrects, avg_loss = 0, 0
-    for batch in data_iter:
-        feature, target = batch.text, batch.label
-        feature.t_(), target.sub_(1)  # batch first, index align
+    for labels, texts, offsets in data_iter:  # CHANGED: 添加offsets参数
         if args.cuda:
-            feature, target = feature.cuda(), target.cuda()
-
-        logit = model(feature)
-        loss = F.cross_entropy(logit, target, size_average=False)
+            labels, texts, offsets = labels.cuda(), texts.cuda(), offsets.cuda()  # CHANGED: 添加offsets的cuda处理
+        
+        logit = model(texts, offsets)  # CHANGED: 调用model时添加offsets参数
+        loss = F.cross_entropy(logit, labels, reduction='sum')
 
         avg_loss += loss.item()
-        corrects += (torch.max(logit, 1)
-                     [1].view(target.size()).data == target.data).sum()
+        corrects += (torch.max(logit, 1)[1].view(labels.size()).data == labels.data).sum()
 
-    size = len(data_iter.dataset)
+    size = sum([len(batch[0]) for batch in data_iter])
     avg_loss /= size
     accuracy = 100.0 * corrects/size
     print('\nEvaluation - loss: {:.6f}  acc: {:.4f}%({}/{}) \n'.format(avg_loss, 
@@ -78,20 +74,19 @@ def eval(data_iter, model, args):
     return accuracy
 
 
-def predict(text, model, text_field, label_feild, cuda_flag):
+def predict(text, model, tokenizer, vocab, cuda_flag):
     assert isinstance(text, str)
     model.eval()
-    # text = text_field.tokenize(text)
-    text = text_field.preprocess(text)
-    text = [[text_field.vocab.stoi[x] for x in text]]
-    x = torch.tensor(text)
-    x = autograd.Variable(x)
+    tokens = tokenizer(text)  # CHANGED: 先分词
+    text_indices = vocab(tokens)  # CHANGED: 使用vocab将分词转换为索引
+    x = torch.tensor(text_indices).unsqueeze(0)  # CHANGED: 使用text_indices创建张量
+    offsets = torch.tensor([0])  # CHANGED: 添加offsets参数
     if cuda_flag:
         x = x.cuda()
-    print(x)
-    output = model(x)
+        offsets = offsets.cuda()  # CHANGED: 添加offsets的cuda处理
+    output = model(x, offsets)  # CHANGED: 调用model时添加offsets参数
     _, predicted = torch.max(output, 1)
-    return label_feild.vocab.itos[predicted.item()+1]
+    return predicted.item() + 1  # CHANGED: 调整返回值，假设标签从1开始
 
 
 def save(model, save_dir, save_prefix, steps):
