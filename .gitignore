@@ -104,3 +104,9 @@ rt-polaritydata.README.1.0.txt
 
 # pycharm
 .idea
+
+
+# textcnn-pytorch/snapshot/
+# textcnn-pytorch/rt-polaritydata
+# textcnn-pytorch/*.txt
+# textcnn-pytorch/*.tar.gz
