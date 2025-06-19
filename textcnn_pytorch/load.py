@@ -166,7 +166,8 @@ def run(lr=0.001, epochs=256, batch_size=64, log_interval=1, test_interval=100, 
         # label = train.predict(args.predict, cnn, text_field, label_field, args.cuda)
         label = train.predict(args.predict, cnn, tokenizer, vocab, args.cuda)
         # print('\n[Text]  {}\n[Label] {}\n'.format(args.predict, label))
-        print(f"[Encoding] {args.predict} -> {label}")
+        # print(f"[Encoding] {args.predict} -> {label}")
+        return label
     elif args.test:
         try:
             train.eval(dev_iter, cnn, args) 
