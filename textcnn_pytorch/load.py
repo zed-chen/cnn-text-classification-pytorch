@@ -121,7 +121,7 @@ def run(lr=0.001, epochs=256, batch_size=64, log_interval=1, test_interval=100, 
 
 
     # load data
-    print("\nLoading data...")
+    # print("\nLoading data...")
 
     tokenizer = get_tokenizer('basic_english')
     text_transform = None
@@ -145,15 +145,15 @@ def run(lr=0.001, epochs=256, batch_size=64, log_interval=1, test_interval=100, 
     # args.save_dir = os.path.join(args.save_dir, datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
     # args.feature_dim = 64
 
-    print("\nParameters:")
-    for attr, value in sorted(args.__dict__.items()):
-        print("\t{}={}".format(attr.upper(), value))
+    # print("\nParameters:")
+    # for attr, value in sorted(args.__dict__.items()):
+    #     print("\t{}={}".format(attr.upper(), value))
 
 
     # model
     cnn = model.CNN_Text(args)
     if args.snapshot is not None:
-        print('\nLoading model from {}...'.format(args.snapshot))
+        # print('\nLoading model from {}...'.format(args.snapshot))
         cnn.load_state_dict(torch.load(args.snapshot))
 
     if args.cuda:
